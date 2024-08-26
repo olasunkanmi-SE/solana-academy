@@ -4,9 +4,11 @@ The idea is to have a school centered upon on NFTs and NFT permissions. Students
 
 ## Proposed Features
 
-[] Soulbond NFT (Student ID)
-[] Token-gated access to content
-[] Dynamic metadata (Attendance, Grades, etc)
+[ ] Soulbond NFT (Student ID)
+
+[ ] Token-gated access to content
+
+[ ] Dynamic metadata (Attendance, Grades, etc)
 
 ## Getting Started
 
