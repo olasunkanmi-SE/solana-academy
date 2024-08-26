@@ -9,9 +9,32 @@
   "instructions": [
     {
       "name": "greet",
-      "discriminator": [203, 194, 3, 150, 228, 58, 181, 62],
+      "discriminator": [
+        203,
+        194,
+        3,
+        150,
+        228,
+        58,
+        181,
+        62
+      ],
       "accounts": [],
       "args": []
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "CustomError",
+      "msg": "Custom error message"
+    }
+  ],
+  "constants": [
+    {
+      "name": "SEED",
+      "type": "string",
+      "value": "\"anchor\""
     }
   ]
 }
