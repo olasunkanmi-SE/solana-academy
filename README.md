@@ -8,7 +8,7 @@ The idea is to have a school centered upon on NFTs and NFT permissions. Students
 
 [ ] Token-gated access to content
 
-[ ] Dynamic metadata (Attendance, Grades, etc)
+[ ] Dynamic metadata (Attendance, Grades, etc) [Guide](https://solana.com/developers/guides/token-extensions/dynamic-meta-data-nft)
 
 ## Getting Started
 
