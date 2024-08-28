@@ -1,3 +1,5 @@
-pub mod initialize;
+pub mod admin;
+pub mod student;
 
-pub use initialize::*;
+pub use admin::*;
+pub use student::*;
