@@ -1,7 +1,7 @@
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
 import { SolanaAcademy } from '../target/types/solana_academy';
-import { LAMPORTS_PER_SOL, SystemProgram, Keypair } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, SystemProgram, Keypair, PublicKey } from '@solana/web3.js';
 
 const COURSE_DURATION_IN_SECONDS = 42 * 24 * 60 * 60;
 
@@ -22,16 +22,24 @@ describe('Solana Academy', () => {
   const courseName: string = "My academy course";
   const courseFee: number = 1 * LAMPORTS_PER_SOL;
   const program = anchor.workspace.SolanaAcademy as Program<SolanaAcademy>;
-  
+
   const admin = Keypair.generate();
   const academy = Keypair.generate();
   const course = Keypair.generate();
+  const student = Keypair.generate();
 
   // Initialize test environment with admin airdrop
   beforeAll(async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         admin.publicKey,
+        10 * LAMPORTS_PER_SOL
+      )
+    );
+
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(
+        student.publicKey,
         10 * LAMPORTS_PER_SOL
       )
     );
@@ -95,5 +103,48 @@ describe('Solana Academy', () => {
     expect(courseState.endDate.toNumber()).toBe(currentTime + COURSE_DURATION_IN_SECONDS);
     expect(courseState.tuitionFee.toNumber()).toBe(courseFee);
     expect(academyState.courseCount.toNumber()).toBe(1);
+  });
+
+  it('Enrolls a Student in the Course', async () => {
+
+    const courseId = new anchor.BN(0);
+
+    const [enrollmentPDA, bump] = await PublicKey.findProgramAddressSync(
+      [
+        Buffer.from('enrollment'),
+        course.publicKey.toBuffer(),
+        student.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    console.log('Enrollment PDA:', enrollmentPDA.toBase58())
+
+    const tx = await program.methods
+      .enrollInCourse(courseId)
+      .accounts({
+        academy: academy.publicKey,
+        course: course.publicKey,
+        enrollment: enrollmentPDA,
+        student: student.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([student])
+      .rpc();
+
+    console.log("Enroll in Course Tx signature:", tx);
+
+    /* const courseState = await program.account.course.fetch(course.publicKey);
+    console.log("Course onchain representation:", courseState);
+
+    const academyState = await program.account.academy.fetch(academy.publicKey);
+ */
+    /* expect(courseState.id.toNumber()).toBe(academyState.courseCount.toNumber() - 1);
+    expect(courseState.name).toBe(courseName);
+    expect(courseState.description).toBe(courseData.description);
+    expect(courseState.startDate.toNumber()).toBe(currentTime);
+    expect(courseState.endDate.toNumber()).toBe(currentTime + COURSE_DURATION_IN_SECONDS);
+    expect(courseState.tuitionFee.toNumber()).toBe(courseFee);
+    expect(academyState.courseCount.toNumber()).toBe(1); */
   });
 });
