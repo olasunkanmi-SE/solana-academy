@@ -1,30 +1,33 @@
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
 import { SolanaAcademy } from '../target/types/solana_academy';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL, SystemProgram, Keypair } from '@solana/web3.js';
 
+const COURSE_DURATION_IN_SECONDS = 42 * 24 * 60 * 60;
 
-const { SystemProgram } = anchor.web3;
+interface CourseData {
+  name: string;
+  description: string;
+  startDate: anchor.BN;
+  endDate: anchor.BN;
+  tuitionFee: anchor.BN;
+}
 
 describe('Solana Academy', () => {
- 
+
   const provider = anchor.AnchorProvider.local();
-  anchor.setProvider(anchor.AnchorProvider.local());
+  anchor.setProvider(provider);
 
-  const academyName: String = "My test academy";
-  const courseName: String = "My academy course";
-  /* const courseFee: Number  = 1 * anchor.web3.LAMPORTS_PER_SOL; */
-  const courseFee: Number  = 1000;
-  
-
+  const academyName: string = "My test academy";
+  const courseName: string = "My academy course";
+  const courseFee: number = 1 * LAMPORTS_PER_SOL;
   const program = anchor.workspace.SolanaAcademy as Program<SolanaAcademy>;
-  const admin = anchor.web3.Keypair.generate();
-  const academy = anchor.web3.Keypair.generate();
   
-  //TODO: what about turning courses into PDAs?
-  const course = anchor.web3.Keypair.generate();
+  const admin = Keypair.generate();
+  const academy = Keypair.generate();
+  const course = Keypair.generate();
 
-
+  // Initialize test environment with admin airdrop
   beforeAll(async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
@@ -48,7 +51,7 @@ describe('Solana Academy', () => {
 
     console.log("Init Academy Tx signature:", tx);
 
-    let academyState = await program.account.academy.fetch(academy.publicKey); 
+    const academyState = await program.account.academy.fetch(academy.publicKey);
     console.log("academy data structure", academyState);
 
     expect(academyState.name).toBe(academyName);
@@ -57,14 +60,14 @@ describe('Solana Academy', () => {
   });
 
   it('Creates a course', async () => {
-    
-    
-    const courseData = {
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    const courseData: CourseData = {
       name: courseName,
       description: "Sol dev course",
-      start_date: new anchor.BN(1000),  
-      end_date: new anchor.BN((Date.now() / 1000) + (42 * 24 * 60 * 60)),  
-      tuition_fee: courseFee,  
+      startDate: new anchor.BN(currentTime),
+      endDate: new anchor.BN(currentTime + COURSE_DURATION_IN_SECONDS),
+      tuitionFee: new anchor.BN(courseFee),
     };
 
     const tx = await program.methods
@@ -80,19 +83,17 @@ describe('Solana Academy', () => {
 
     console.log("Create course Tx signature:", tx);
 
-    let courseState = await program.account.course.fetch(course.publicKey); 
-
-    console.log("Course onchain representation", courseState); 
+    const courseState = await program.account.course.fetch(course.publicKey);
+    console.log("Course onchain representation:", courseState);
 
     const academyState = await program.account.academy.fetch(academy.publicKey);
-    
-    //FIXME TODO: figure out why the numbers are not serializing/converting correctly
-    expect(courseState.id.toNumber()).toBe(academyState.courseCount.toNumber() - 1)
+
+    expect(courseState.id.toNumber()).toBe(academyState.courseCount.toNumber() - 1);
     expect(courseState.name).toBe(courseName);
     expect(courseState.description).toBe(courseData.description);
-    /* expect(courseState.startDate.toNumber()).toBe(startDate) */
-    /* expect(courseState.endDate.toNumber()).toBe(startDate) */
-    /* expect(courseState.tuitionFee.toNumber()).toBe(courseFee); */
+    expect(courseState.startDate.toNumber()).toBe(currentTime);
+    expect(courseState.endDate.toNumber()).toBe(currentTime + COURSE_DURATION_IN_SECONDS);
+    expect(courseState.tuitionFee.toNumber()).toBe(courseFee);
     expect(academyState.courseCount.toNumber()).toBe(1);
   });
 });
