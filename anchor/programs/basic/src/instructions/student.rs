@@ -42,5 +42,3 @@ pub fn enroll_in_course(ctx: Context<EnrollInCourse>, course_id: u64) -> Result<
 
     Ok(())
 }
-
-// Add other student instructions here

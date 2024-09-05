@@ -14,8 +14,12 @@ declare_id!("2YiEtpUg9CWjHS4Ko6LvezzP9wBuyAuEzpv26AERFDSv");
 pub mod solana_academy {
     use super::*;
 
-    pub fn initialize_academy(ctx: Context<InitializeAcademy>, name: String) -> Result<()> {
-        instructions::admin::initialize_academy(ctx, name)
+    pub fn initialize_academy(
+        ctx: Context<InitializeAcademy>,
+        name: String,
+        enrollment_fee: u64,
+    ) -> Result<()> {
+        instructions::admin::initialize_academy(ctx, name, enrollment_fee)
     }
 
     pub fn create_course(ctx: Context<CreateCourse>, course_data: CourseData) -> Result<()> {

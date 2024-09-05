@@ -244,6 +244,14 @@ export type SolanaAcademy = {
           {
             "name": "courseCount",
             "type": "u64"
+          },
+          {
+            "name": "enrollmentFee",
+            "type": "u64"
+          },
+          {
+            "name": "studentCounter",
+            "type": "u64"
           }
         ]
       }
