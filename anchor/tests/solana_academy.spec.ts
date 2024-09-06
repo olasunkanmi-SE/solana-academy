@@ -96,7 +96,6 @@ describe('Solana Academy', () => {
 
     const courseState = await program.account.course.fetch(course.publicKey);
     console.log('Course onchain representation:', courseState);
-
     const academyState = await program.account.academy.fetch(academy.publicKey);
 
     expect(courseState.id.toNumber()).toBe(
@@ -115,7 +114,19 @@ describe('Solana Academy', () => {
   it('Enrolls a Student in the Course', async () => {
     const courseId = new anchor.BN(0);
 
-    const [enrollmentPDA, bump] = await PublicKey.findProgramAddressSync(
+    // Fetch academy state to get course count
+    const academyState = await program.account.academy.fetch(academy.publicKey);
+    let courseId: anchor.BN;
+
+    if (academyState.courseCount.toNumber() > 0) {
+      // Get the most recent course ID by subtracting 1 from the total count
+      courseId = new anchor.BN(academyState.courseCount.toNumber() - 1);
+      console.log(`Enrolling in course ID: ${courseId.toString()}`);
+    } else {
+      throw new Error("No courses available for enrollment.");
+    }
+
+    const [enrollmentPDA] = await PublicKey.findProgramAddressSync(
       [
         Buffer.from('enrollment'),
         course.publicKey.toBuffer(),
@@ -140,17 +151,14 @@ describe('Solana Academy', () => {
 
     console.log('Enroll in Course Tx signature:', tx);
 
-    /* const courseState = await program.account.course.fetch(course.publicKey);
-    console.log("Course onchain representation:", courseState);
+    const enrollmentState = await program.account.enrollment.fetch(enrollmentPDA);
+    console.log("Enrollment onchain representation:", enrollmentState);
 
-    const academyState = await program.account.academy.fetch(academy.publicKey);
- */
-    /* expect(courseState.id.toNumber()).toBe(academyState.courseCount.toNumber() - 1);
-    expect(courseState.name).toBe(courseName);
-    expect(courseState.description).toBe(courseData.description);
-    expect(courseState.startDate.toNumber()).toBe(currentTime);
-    expect(courseState.endDate.toNumber()).toBe(currentTime + COURSE_DURATION_IN_SECONDS);
-    expect(courseState.tuitionFee.toNumber()).toBe(courseFee);
-    expect(academyState.courseCount.toNumber()).toBe(1); */
+    expect(enrollmentState.student.toString()).toBe(student.publicKey.toString());
+    expect(enrollmentState.course.toString()).toBe(course.publicKey.toString());
+    expect(enrollmentState.completed.toString()).toBe("false");
+
+    const courseState = await program.account.course.fetch(course.publicKey);
+    expect(courseState.enrollmentCount.toNumber()).toBe(1);
   });
 });
