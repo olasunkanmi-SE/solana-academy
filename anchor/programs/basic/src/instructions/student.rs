@@ -38,6 +38,8 @@ pub fn enroll_in_course(ctx: Context<EnrollInCourse>, course_id: u64) -> Result<
 
     course.enrollment_count += 1;
 
+    msg!("A student has enrolled!");
+
     Ok(())
 }
 
