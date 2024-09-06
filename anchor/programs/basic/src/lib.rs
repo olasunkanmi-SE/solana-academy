@@ -22,6 +22,10 @@ pub mod solana_academy {
         instructions::admin::initialize_academy(ctx, name, enrollment_fee)
     }
 
+    pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) -> Result<()> {
+        instructions::admin::enroll_student_in_academy(ctx, payment)
+    }
+
     pub fn create_course(ctx: Context<CreateCourse>, course_data: CourseData) -> Result<()> {
         instructions::admin::create_course(ctx, course_data)
     }

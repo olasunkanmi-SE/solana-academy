@@ -10,4 +10,8 @@ pub enum AcademyError {
     AlreadyEnrolled,
     #[msg("Insufficient balance to pay tuition fee")]
     InsufficientBalance,
+    #[msg("Invalid mint NFT mint authority")]
+    InvalidNFTAuthority,
+    #[msg("Invalid student NFT")]
+    InvalidStudentNFT,
 }

@@ -1,6 +1,7 @@
 use crate::{error::AcademyError, state::*};
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use solana_program::system_instruction;
 
 #[derive(Accounts)]
 pub struct InitializeAcademy<'info> {
@@ -24,11 +25,46 @@ pub fn initialize_academy(
     Ok(())
 }
 
+#[derive(Accounts)]
+pub struct EnrollInAcademy<'info> {
+    #[account(mut)]
+    pub academy: Account<'info, Academy>,
+    #[account(init, payer = user, space = 8 + 8 + 32 + 200)]
+    pub student: Account<'info, Student>,
+    #[account(mut, constraint = student_nft_mint.mint_authority.unwrap() == admin.key())]
+    pub student_nft_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub student_token_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
 pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) -> Result<()> {
     let academy = &mut ctx.accounts.academy;
     if payment < academy.enrollment_fee {
         return Err(AcademyError::InsufficientBalance.into());
     }
+
+    // Make payment
+    let from_account = &ctx.accounts.user;
+    let to_account = &ctx.accounts.admin;
+
+    let transfer_instruction =
+        system_instruction::transfer(from_account.key, to_account.key, academy.enrollment_fee);
+
+    anchor_lang::solana_program::program::invoke_signed(
+        &transfer_instruction,
+        &[
+            from_account.to_account_info(),
+            to_account.to_account_info().clone(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+        &[],
+    )?;
 
     // Mint new student ID NFT
     let cpi_accounts = token::MintTo {
@@ -76,20 +112,4 @@ pub fn create_course(ctx: Context<CreateCourse>, course_data: CourseData) -> Res
     academy.course_count += 1;
 
     Ok(())
-}
-
-#[derive(Accounts)]
-pub struct EnrollInAcademy<'info> {
-    #[account(mut)]
-    pub academy: Account<'info, Academy>,
-    #[account(init, payer = admin, space = 8 + 8 + 32 + 200)]
-    pub student: Account<'info, Student>,
-    #[account(mut)]
-    pub student_nft_mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub student_token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub admin: Signer<'info>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
