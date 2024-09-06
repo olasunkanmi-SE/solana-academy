@@ -113,7 +113,14 @@ export type SolanaAcademy = {
         },
         {
           "name": "student",
-          "writable": true,
+          "writable": true
+        },
+        {
+          "name": "studentNftMint",
+          "writable": true
+        },
+        {
+          "name": "admin",
           "signer": true
         },
         {
@@ -124,6 +131,62 @@ export type SolanaAcademy = {
       "args": [
         {
           "name": "courseId",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "enrollStudentInAcademy",
+      "discriminator": [
+        255,
+        180,
+        113,
+        188,
+        101,
+        15,
+        188,
+        87
+      ],
+      "accounts": [
+        {
+          "name": "academy",
+          "writable": true
+        },
+        {
+          "name": "student",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "studentNftMint",
+          "writable": true
+        },
+        {
+          "name": "studentTokenAccount",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "payment",
           "type": "u64"
         }
       ]
@@ -160,6 +223,10 @@ export type SolanaAcademy = {
         {
           "name": "name",
           "type": "string"
+        },
+        {
+          "name": "enrollmentFee",
+          "type": "u64"
         }
       ]
     }
@@ -203,6 +270,19 @@ export type SolanaAcademy = {
         57,
         51
       ]
+    },
+    {
+      "name": "student",
+      "discriminator": [
+        173,
+        194,
+        250,
+        75,
+        154,
+        20,
+        81,
+        57
+      ]
     }
   ],
   "errors": [
@@ -225,6 +305,16 @@ export type SolanaAcademy = {
       "code": 6003,
       "name": "insufficientBalance",
       "msg": "Insufficient balance to pay tuition fee"
+    },
+    {
+      "code": 6004,
+      "name": "invalidNftAuthority",
+      "msg": "Invalid mint NFT mint authority"
+    },
+    {
+      "code": 6005,
+      "name": "invalidStudentNft",
+      "msg": "Invalid student NFT"
     }
   ],
   "types": [
@@ -243,6 +333,14 @@ export type SolanaAcademy = {
           },
           {
             "name": "courseCount",
+            "type": "u64"
+          },
+          {
+            "name": "enrollmentFee",
+            "type": "u64"
+          },
+          {
+            "name": "studentCounter",
             "type": "u64"
           }
         ]
@@ -332,6 +430,34 @@ export type SolanaAcademy = {
           {
             "name": "completed",
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "student",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "studentId",
+            "type": "u64"
+          },
+          {
+            "name": "studentNft",
+            "type": "pubkey"
+          },
+          {
+            "name": "enrolledClasses",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "ownedBooks",
+            "type": {
+              "vec": "string"
+            }
           }
         ]
       }
