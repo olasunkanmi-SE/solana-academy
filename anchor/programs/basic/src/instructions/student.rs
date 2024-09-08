@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::system_instruction;
 use anchor_spl::token::Mint;
 
 #[derive(Accounts)]
@@ -25,14 +26,14 @@ pub struct EnrollInCourse<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// TODO refactor code
 pub fn enroll_in_course(ctx: Context<EnrollInCourse>, course_id: u64) -> Result<()> {
     let course = &mut ctx.accounts.course;
     let enrollment = &mut ctx.accounts.enrollment;
     let student = &mut ctx.accounts.student;
+    let admin = &ctx.accounts.admin;
 
-    if course.id != course_id {
-        return Err(AcademyError::InvalidCourseId.into());
-    }
+    require!(course.id == course_id, AcademyError::InvalidCourseId);
 
     let mint_authority = ctx.accounts.student_nft_mint.mint_authority.unwrap();
 
@@ -43,6 +44,21 @@ pub fn enroll_in_course(ctx: Context<EnrollInCourse>, course_id: u64) -> Result<
     if student.student_nft != ctx.accounts.student_nft_mint.key() {
         return Err(AcademyError::InvalidStudentNFT.into());
     }
+
+    //Make Payment
+
+    let transfer_instruction =
+        system_instruction::transfer(&ctx.accounts.student.key(), admin.key, course.tuition_fee);
+
+    anchor_lang::solana_program::program::invoke_signed(
+        &transfer_instruction,
+        &[
+            ctx.accounts.student.to_account_info(),
+            admin.to_account_info().clone(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+        &[],
+    )?;
 
     enrollment.student = ctx.accounts.student.key();
     enrollment.course = course.key();

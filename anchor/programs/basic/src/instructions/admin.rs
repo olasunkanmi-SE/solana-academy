@@ -42,16 +42,22 @@ pub struct EnrollInAcademy<'info> {
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
-
+//what is the essence of passing payment to this method, should there be a check if the ctx.accounts.user has more than the enrollment fee ? or am I missing something
 pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) -> Result<()> {
+    let from_account = &ctx.accounts.user;
+    let to_account = &ctx.accounts.admin;
     let academy = &mut ctx.accounts.academy;
+
     if payment < academy.enrollment_fee {
         return Err(AcademyError::InsufficientBalance.into());
     }
 
+    let user_balance = from_account.lamports();
+    if user_balance < payment {
+        return Err(AcademyError::InsufficientSchoolFee.into());
+    }
+
     // Make payment
-    let from_account = &ctx.accounts.user;
-    let to_account = &ctx.accounts.admin;
 
     let transfer_instruction =
         system_instruction::transfer(from_account.key, to_account.key, academy.enrollment_fee);

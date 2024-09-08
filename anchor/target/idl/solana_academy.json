@@ -297,16 +297,26 @@
     },
     {
       "code": 6003,
+      "name": "InsufficientSchoolFee",
+      "msg": "Insufficient balance to pay school fees"
+    },
+    {
+      "code": 6004,
+      "name": "InsufficientCourseFee",
+      "msg": "Insufficient balance to pay school fees"
+    },
+    {
+      "code": 6005,
       "name": "InsufficientBalance",
       "msg": "Insufficient balance to pay tuition fee"
     },
     {
-      "code": 6004,
+      "code": 6006,
       "name": "InvalidNFTAuthority",
       "msg": "Invalid mint NFT mint authority"
     },
     {
-      "code": 6005,
+      "code": 6007,
       "name": "InvalidStudentNFT",
       "msg": "Invalid student NFT"
     }
