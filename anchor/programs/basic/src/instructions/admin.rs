@@ -42,7 +42,7 @@ pub struct EnrollInAcademy<'info> {
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
-//what is the essence of passing payment to this method, should there be a check if the ctx.accounts.user has more than the enrollment fee ? or am I missing something
+
 pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) -> Result<()> {
     let from_account = &ctx.accounts.user;
     let to_account = &ctx.accounts.admin;
