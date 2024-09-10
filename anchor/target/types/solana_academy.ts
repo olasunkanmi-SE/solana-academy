@@ -303,16 +303,26 @@ export type SolanaAcademy = {
     },
     {
       "code": 6003,
+      "name": "insufficientSchoolFee",
+      "msg": "Insufficient balance to pay school fees"
+    },
+    {
+      "code": 6004,
+      "name": "insufficientCourseFee",
+      "msg": "Insufficient balance to pay school fees"
+    },
+    {
+      "code": 6005,
       "name": "insufficientBalance",
       "msg": "Insufficient balance to pay tuition fee"
     },
     {
-      "code": 6004,
+      "code": 6006,
       "name": "invalidNftAuthority",
       "msg": "Invalid mint NFT mint authority"
     },
     {
-      "code": 6005,
+      "code": 6007,
       "name": "invalidStudentNft",
       "msg": "Invalid student NFT"
     }
