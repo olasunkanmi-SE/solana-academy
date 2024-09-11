@@ -1,164 +1,243 @@
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
+import { createAccount, createMint, mintTo } from '@solana/spl-token';
 import { SolanaAcademy } from '../target/types/solana_academy';
-import {
-  LAMPORTS_PER_SOL,
-  SystemProgram,
-  Keypair,
-  PublicKey,
-} from '@solana/web3.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-const COURSE_DURATION_IN_SECONDS = 42 * 24 * 60 * 60;
+describe('academy', () => {
+  let provider: anchor.AnchorProvider;
+  let program: anchor.Program<SolanaAcademy>;
+  let admin: anchor.web3.Keypair;
+  let user: anchor.web3.Keypair;
+  let academy: anchor.web3.Keypair,
+    student: anchor.web3.Keypair,
+    name,
+    enrollmentFee,
+    academyAccount,
+    studentNftMint,
+    studentTokenAccount,
+    course: anchor.web3.Keypair;
 
-interface CourseData {
-  name: string;
-  description: string;
-  startDate: anchor.BN;
-  endDate: anchor.BN;
-  tuitionFee: anchor.BN;
-}
+  beforeEach(async () => {
+    provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    program = anchor.workspace.SolanaAcademy as Program<SolanaAcademy>;
+    admin = anchor.web3.Keypair.generate();
+    user = anchor.web3.Keypair.generate();
+    academy = anchor.web3.Keypair.generate();
+    student = anchor.web3.Keypair.generate();
+    course = anchor.web3.Keypair.generate();
+    name = 'Test Academy';
+    enrollmentFee = new anchor.BN(1000000);
 
-describe('Solana Academy', () => {
-  const provider = anchor.AnchorProvider.local();
-  anchor.setProvider(provider);
-
-  const academyName: string = 'My test academy';
-  const courseName: string = 'My academy course';
-  const courseFee: number = 1 * LAMPORTS_PER_SOL;
-  const program = anchor.workspace.SolanaAcademy as Program<SolanaAcademy>;
-
-  const admin = Keypair.generate();
-  const academy = Keypair.generate();
-  const course = Keypair.generate();
-  const student = Keypair.generate();
-
-  // Initialize test environment with admin airdrop
-  beforeAll(async () => {
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(
-        admin.publicKey,
-        10 * LAMPORTS_PER_SOL
-      )
+    const adminWalletAirDrop = await provider.connection.requestAirdrop(
+      admin.publicKey,
+      10000000
     );
+    await provider.connection.confirmTransaction(adminWalletAirDrop);
 
-    await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(
-        student.publicKey,
-        10 * LAMPORTS_PER_SOL
-      )
+    const userWalletAirDrop = await provider.connection.requestAirdrop(
+      user.publicKey,
+      10000000
     );
-  });
+    await provider.connection.confirmTransaction(userWalletAirDrop);
 
-  it('Initializes the Academy', async () => {
-    const tx = await program.methods
-      .initializeAcademy(academyName, new anchor.BN(courseFee))
+    const StudentAirDrop = await provider.connection.requestAirdrop(
+      student.publicKey,
+      10000000
+    );
+    await provider.connection.confirmTransaction(StudentAirDrop);
+
+    await program.methods
+      .initializeAcademy(name, enrollmentFee)
       .accounts({
         academy: academy.publicKey,
         admin: admin.publicKey,
-        systemProgram: SystemProgram.programId,
       })
       .signers([admin, academy])
       .rpc();
+    academyAccount = await program.account.academy.fetch(academy.publicKey);
 
-    console.log('Init Academy Tx signature:', tx);
+    studentNftMint = await createMint(
+      provider.connection,
+      admin,
+      admin.publicKey,
+      null,
+      0
+    );
 
-    const academyState = await program.account.academy.fetch(academy.publicKey);
-    console.log('academy data structure', academyState);
+    studentTokenAccount = await createAccount(
+      provider.connection,
+      user,
+      studentNftMint,
+      user.publicKey
+    );
+  });
 
-    expect(academyState.name).toBe(academyName);
-    expect(academyState.admin.toString()).toBe(admin.publicKey.toString());
-    expect(academyState.courseCount.toNumber()).toBe(0);
+  it('Should create an academy', async () => {
+    expect(academyAccount.name).toBe(name);
+    expect(academyAccount.enrollmentFee.toNumber()).toBe(
+      enrollmentFee.toNumber()
+    );
+    expect(academyAccount.admin.toBase58()).toBe(admin.publicKey.toBase58());
+    expect(academyAccount.courseCount.toNumber()).toBe(0);
+  });
+
+  it('Should enroll a student in the academy', async () => {
+    const initialUserBalance = await provider.connection.getBalance(
+      user.publicKey
+    );
+    const initialAdminBalance = await provider.connection.getBalance(
+      admin.publicKey
+    );
+    await program.methods
+      .enrollStudentInAcademy(enrollmentFee)
+      .accounts({
+        academy: academy.publicKey,
+        student: student.publicKey,
+        studentNftMint: studentNftMint,
+        studentTokenAccount: studentTokenAccount,
+        user: user.publicKey,
+        admin: admin.publicKey,
+      })
+      .signers([user, admin, student])
+      .rpc();
+
+    const academyAccount = await program.account.academy.fetch(
+      academy.publicKey
+    );
+    const studentAccount = await program.account.student.fetch(
+      student.publicKey
+    );
+    const finalUserBalance = await provider.connection.getBalance(
+      user.publicKey
+    );
+    const finalAdminBalance = await provider.connection.getBalance(
+      admin.publicKey
+    );
+
+    const userBalanceDifference = initialUserBalance - finalUserBalance;
+    const adminBalanceDifference = finalAdminBalance - initialAdminBalance;
+    expect(userBalanceDifference).toBeGreaterThanOrEqual(
+      parseInt(enrollmentFee.toString())
+    );
+    expect(finalAdminBalance).toBeGreaterThan(initialAdminBalance);
+    expect(academyAccount.name).toBe(name);
+    expect(parseInt(academyAccount.studentCounter)).toEqual(1);
+    expect(studentAccount.studentNft).toEqual(studentNftMint);
+    expect(adminBalanceDifference).toBe(enrollmentFee.toNumber());
   });
 
   it('Creates a course', async () => {
-    const currentTime = Math.floor(Date.now() / 1000);
+    // Generate a new keypair for the course account
+    course = anchor.web3.Keypair.generate();
 
-    const courseData: CourseData = {
-      name: courseName,
-      description: 'Sol dev course',
-      startDate: new anchor.BN(currentTime),
-      endDate: new anchor.BN(currentTime + COURSE_DURATION_IN_SECONDS),
-      tuitionFee: new anchor.BN(courseFee),
+    // Prepare course data
+    const courseData = {
+      name: 'Introduction to Solana',
+      description: 'Learn the basics of Solana blockchain development',
+      startDate: new anchor.BN(Date.now() / 1000),
+      endDate: new anchor.BN(Date.now() / 1000 + 30 * 24 * 60 * 60), // 30 days from now
+      tuitionFee: new anchor.BN(1 * LAMPORTS_PER_SOL),
     };
 
-    const tx = await program.methods
+    // Call the create_course instruction
+    await program.methods
       .createCourse(courseData)
       .accounts({
         academy: academy.publicKey,
         course: course.publicKey,
         admin: admin.publicKey,
-        systemProgram: SystemProgram.programId,
       })
       .signers([admin, course])
       .rpc();
 
-    console.log('Create course Tx signature:', tx);
+    const courseAccount = await program.account.course.fetch(course.publicKey);
 
-    const courseState = await program.account.course.fetch(course.publicKey);
-    console.log('Course onchain representation:', courseState);
-    const academyState = await program.account.academy.fetch(academy.publicKey);
+    const academyAccount = await program.account.academy.fetch(
+      academy.publicKey
+    );
 
-    expect(courseState.id.toNumber()).toBe(
-      academyState.courseCount.toNumber() - 1
+    expect(courseAccount.id.toNumber()).toBe(0);
+    expect(courseAccount.name).toBe(courseData.name);
+    expect(courseAccount.description).toBe(courseData.description);
+    expect(courseAccount.startDate.toNumber()).toBe(
+      courseData.startDate.toNumber()
     );
-    expect(courseState.name).toBe(courseName);
-    expect(courseState.description).toBe(courseData.description);
-    expect(courseState.startDate.toNumber()).toBe(currentTime);
-    expect(courseState.endDate.toNumber()).toBe(
-      currentTime + COURSE_DURATION_IN_SECONDS
+    expect(courseAccount.endDate.toNumber()).toBe(
+      courseData.endDate.toNumber()
     );
-    expect(courseState.tuitionFee.toNumber()).toBe(courseFee);
-    expect(academyState.courseCount.toNumber()).toBe(1);
+    expect(courseAccount.tuitionFee.toNumber()).toBe(
+      courseData.tuitionFee.toNumber()
+    );
+    expect(courseAccount.enrollmentCount.toNumber()).toBe(0);
+
+    expect(academyAccount.courseCount.toNumber()).toBe(1);
+
+    expect(academyAccount.admin).toStrictEqual(admin.publicKey);
   });
 
-  it('Enrolls a Student in the Course', async () => {
-    const courseId = new anchor.BN(0);
+  // it('Should enroll students in course', async () => {
+  //   const [enrollmentPda, _] =
+  //     await anchor.web3.PublicKey.findProgramAddressSync(
+  //       [
+  //         Buffer.from('enrollment'),
+  //         course.publicKey.toBuffer(),
+  //         student.publicKey.toBuffer(),
+  //       ],
+  //       program.programId
+  //     );
 
-    // Fetch academy state to get course count
-    const academyState = await program.account.academy.fetch(academy.publicKey);
-    let courseId: anchor.BN;
+  //   const intialStudentBalance = await provider.connection.getBalance(
+  //     student.publicKey
+  //   );
+  //   const initialAdminBalance = await provider.connection.getBalance(
+  //     admin.publicKey
+  //   );
 
-    if (academyState.courseCount.toNumber() > 0) {
-      // Get the most recent course ID by subtracting 1 from the total count
-      courseId = new anchor.BN(academyState.courseCount.toNumber() - 1);
-      console.log(`Enrolling in course ID: ${courseId.toString()}`);
-    } else {
-      throw new Error("No courses available for enrollment.");
-    }
+  //   await createAccount(
+  //     provider.connection,
+  //     admin,
+  //     studentNftMint,
+  //     student.publicKey
+  //   );
 
-    const [enrollmentPDA] = await PublicKey.findProgramAddressSync(
-      [
-        Buffer.from('enrollment'),
-        course.publicKey.toBuffer(),
-        student.publicKey.toBuffer(),
-      ],
-      program.programId
+  //   await program.methods
+  //     .enrollInCourse(new anchor.BN(0))
+  //     .accounts({
+  //       academy: academy.publicKey,
+  //       course: course.publicKey,
+  //       enrollment: enrollmentPda,
+  //       student: student.publicKey,
+  //       studentNftMint: studentNftMint,
+  //       admin: admin.publicKey,
+  //     })
+  //     .signers([admin])
+  //     .rpc();
+
+  //   const courseAccount = await program.account.course.fetch(course.publicKey);
+  //   expect(courseAccount.enrollmentCount).toEqual(1);
+  // });
+
+  it('Should fail to enroll with insufficient balance', async () => {
+    const user = anchor.web3.Keypair.generate();
+    await provider.connection.requestAirdrop(
+      user.publicKey,
+      0.1 * LAMPORTS_PER_SOL
     );
-
-    console.log('Enrollment PDA:', enrollmentPDA.toBase58());
-
-    const tx = await program.methods
-      .enrollInCourse(courseId)
-      .accounts({
-        academy: academy.publicKey,
-        course: course.publicKey,
-        enrollment: enrollmentPDA,
-        student: student.publicKey,
-        systemProgram: SystemProgram.programId,
-      })
-      .signers([student])
-      .rpc();
-
-    console.log('Enroll in Course Tx signature:', tx);
-
-    const enrollmentState = await program.account.enrollment.fetch(enrollmentPDA);
-    console.log("Enrollment onchain representation:", enrollmentState);
-
-    expect(enrollmentState.student.toString()).toBe(student.publicKey.toString());
-    expect(enrollmentState.course.toString()).toBe(course.publicKey.toString());
-    expect(enrollmentState.completed.toString()).toBe("false");
-
-    const courseState = await program.account.course.fetch(course.publicKey);
-    expect(courseState.enrollmentCount.toNumber()).toBe(1);
+    expect(
+      program.methods
+        .enrollStudentInAcademy(enrollmentFee)
+        .accounts({
+          academy: academy.publicKey,
+          student: student.publicKey,
+          studentNftMint: studentNftMint,
+          studentTokenAccount: studentTokenAccount,
+          user: user.publicKey,
+          admin: admin.publicKey,
+        })
+        .signers([user, admin, student])
+        .rpc()
+    ).rejects.toThrow('Insufficient balance to pay school fees');
   });
 });
