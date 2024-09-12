@@ -94,6 +94,7 @@ pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) ->
 
 #[derive(Accounts)]
 pub struct CreateCourse<'info> {
+    // This means that the User account can only be modified by the admin account
     #[account(mut, has_one = admin)]
     pub academy: Account<'info, Academy>,
     #[account(init, payer = admin, space = Course::LEN)]
