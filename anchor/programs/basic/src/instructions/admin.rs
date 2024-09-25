@@ -1,7 +1,8 @@
 use crate::{error::AcademyError, state::*};
-use anchor_lang::{prelude::*, solana_program};
+use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-use solana_program::system_instruction;
+
+use super::{transfer_sol, TransferSol};
 
 #[derive(Accounts)]
 pub struct InitializeAcademy<'info> {
@@ -58,19 +59,13 @@ pub fn enroll_student_in_academy(ctx: Context<EnrollInAcademy>, payment: u64) ->
     }
 
     // Make payment
+    let transfer_accounts = TransferSol {
+        from: from_account.to_account_info(),
+        to: to_account.to_account_info(),
+        system_program: ctx.accounts.system_program.to_account_info(),
+    };
 
-    let transfer_instruction =
-        system_instruction::transfer(from_account.key, to_account.key, academy.enrollment_fee);
-
-    anchor_lang::solana_program::program::invoke_signed(
-        &transfer_instruction,
-        &[
-            from_account.to_account_info(),
-            to_account.to_account_info().clone(),
-            ctx.accounts.system_program.to_account_info(),
-        ],
-        &[],
-    )?;
+    transfer_sol(&transfer_accounts, academy.enrollment_fee)?;
 
     // Mint new student ID NFT
     let cpi_accounts = token::MintTo {
