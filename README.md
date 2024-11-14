@@ -1,104 +1,180 @@
-# solana-academy
+# Solana Academy Smart Contract
 
-The idea is to have a school centered upon on NFTs and NFT permissions. Students join the school and are awarded an NFT. This NFT acts as their Student ID and their source of permissions. The ID NFT will allow them to register for classes or receive school books (represented as other NFTs).
+A decentralized education platform built on Solana blockchain that enables academic institutions to manage courses, student enrollments, and handle payments using blockchain technology.
 
-## Proposed Features
+## Features
 
-[ ] Soulbond NFT (Student ID)
+- Academy initialization and management
+- Student enrollment with NFT-based student IDs
+- Course creation and management
+- Course enrollment system
+- Payment handling for both academy enrollment and course fees
+- Student progress tracking
 
-[ ] Token-gated access to content
+## Technical Architecture
 
-[ ] Dynamic metadata (Attendance, Grades, etc) [Guide](https://solana.com/developers/guides/token-extensions/dynamic-meta-data-nft)
+### Account Structures
+
+1. **Academy Account**
+   - Stores academy name
+   - Tracks admin public key
+   - Manages course count
+   - Sets enrollment fee
+   - Tracks student counter
+
+2. **Student Account**
+   - Stores student ID
+   - Links to student NFT
+   - Tracks enrolled classes
+   - Manages owned books
+
+3. **Course Account**
+   - Stores course details (name, description)
+   - Manages course timeline
+   - Sets tuition fee
+   - Tracks enrollment count
+
+4. **Enrollment Account**
+   - Links student to course
+   - Tracks enrollment date
+   - Monitors completion status
+
+## Key Functions
+
+### Admin Functions
+
+1. `initialize_academy`
+   - Initialize new academy
+   - Set enrollment fee
+   - Set admin privileges
+
+2. `create_course`
+   - Create new courses
+   - Set course details and tuition
+   - Manage course timeline
+
+### Student Functions
+
+1. `enroll_student_in_academy`
+   - Process academy enrollment
+   - Handle enrollment fee payment
+   - Mint student NFT ID
+
+2. `enroll_in_course`
+   - Process course enrollment
+   - Handle tuition payment
+   - Create enrollment record
+
+## Security Features
+
+- NFT-based student identification
+- Admin-only course creation
+- Payment verification
+- Student NFT authority validation
+- Course enrollment verification
+
+## Prerequisites
+
+- Solana Tool Suite
+- Anchor Framework
+- Rust
+- Node.js and npm
 
 ## Getting Started
 
-### Prerequisites
-
-- Node v18.18.0 or higher
-
-- Rust v1.77.2 or higher
-- Anchor CLI 0.30.0 or higher
-- Solana CLI 1.18.9 or higher
-
-### Installation
-
-#### Clone the repo
-
-```shell
-git clone <repo-url>
-cd <repo-name>
+1. Clone the repository
+```bash
+git clone [repository-url]
 ```
 
-#### Install Dependencies
-
-```shell
+2. Install dependencies
+```bash
 npm install
 ```
 
-#### Start the web app
-
-```
-npm run dev
-```
-
-## Apps
-
-### anchor
-
-This is a Solana program written in Rust using the Anchor framework.
-
-#### Commands
-
-You can use any normal anchor commands. Either move to the `anchor` directory and run the `anchor` command or prefix the command with `npm run`, eg: `npm run anchor`.
-
-#### Sync the program id:
-
-Running this command will create a new keypair in the `anchor/target/deploy` directory and save the address to the Anchor config file and update the `declare_id!` macro in the `./src/lib.rs` file of the program.
-
-You will manually need to update the constant in `anchor/lib/basic-exports.ts` to match the new program id.
-
-```shell
-npm run anchor keys sync
+3. Build the program
+```bash
+anchor build
 ```
 
-#### Build the program:
-
-```shell
-npm run anchor-build
+4. Deploy
+```bash
+anchor deploy
 ```
 
-#### Start the test validator with the program deployed:
+## Testing
 
-```shell
-npm run anchor-localnet
+Run the test suite:
+```bash
+anchor test
 ```
 
-#### Run the tests
+## Architectural Flow
 
-```shell
-npm run anchor-test
+```mermaid
+flowchart TD
+    subgraph Admin Actions
+        A[Admin] -->|Initialize Academy| B[Academy Account]
+        B -->|Configure| B1[Set Name]
+        B -->|Configure| B2[Set Enrollment Fee]
+        B -->|Configure| B3[Set Admin PubKey]
+        
+        A -->|Create Course| C[Course Account]
+        C -->|Set Details| C1[Course Name]
+        C -->|Set Details| C2[Description]
+        C -->|Set Details| C3[Start/End Dates]
+        C -->|Set Details| C4[Tuition Fee]
+    end
+
+    subgraph Student Enrollment Flow
+        D[New Student] -->|Enroll in Academy| E[Payment Check]
+        E -->|If Sufficient Balance| F[Process Payment]
+        F -->|Transfer SOL| G[Admin Wallet]
+        F -->|Create| H[Student Account]
+        F -->|Mint| I[Student NFT]
+        H -->|Store| H1[Student ID]
+        H -->|Link| H2[NFT PubKey]
+    end
+
+    subgraph Course Enrollment Flow
+        J[Enrolled Student] -->|Enroll in Course| K[Verification]
+        K -->|Verify| K1[Student NFT]
+        K -->|Verify| K2[Payment]
+        K -->|If Valid| L[Create Enrollment]
+        L -->|Initialize| L1[Enrollment Account]
+        L1 -->|Store| L2[Student PubKey]
+        L1 -->|Store| L3[Course PubKey]
+        L1 -->|Store| L4[Enrollment Date]
+        L1 -->|Store| L5[Completion Status]
+        K2 -->|Transfer SOL| G
+    end
+
+    subgraph Account States
+        M[Academy State]
+        M -->|Tracks| M1[Course Count]
+        M -->|Tracks| M2[Student Counter]
+        M -->|Tracks| M3[Total Enrollment]
+
+        N[Course State]
+        N -->|Tracks| N1[Enrollment Count]
+        N -->|Tracks| N2[Course Status]
+
+        O[Student State]
+        O -->|Tracks| O1[Enrolled Classes]
+        O -->|Tracks| O2[Owned Books]
+    end
+
+    %% Relationships
+    B -.->|Updates| M
+    C -.->|Updates| N
+    H -.->|Updates| O
+    L1 -.->|Updates| N1
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style D fill:#bfb,stroke:#333,stroke-width:2px
+    style J fill:#bfb,stroke:#333,stroke-width:2px
+    style G fill:#fbb,stroke:#333,stroke-width:2px
 ```
 
-#### Deploy to Devnet
-
-```shell
-npm run anchor deploy --provider.cluster devnet
-```
-
-### web
-
-This is a React app that uses the Anchor generated client to interact with the Solana program.
-
-#### Commands
-
-Start the web app
-
-```shell
-npm run dev
-```
-
-Build the web app
-
-```shell
-npm run build
-```
